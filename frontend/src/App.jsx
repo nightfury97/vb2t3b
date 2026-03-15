@@ -74,7 +74,7 @@ const AppContent = () => {
 
       {/* Navbar cho Điện thoại */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-3 z-50 pb-safe">
-        <MobileLink to="/members" icon={<Users size={24}/>} label="Lớp" />
+        {/* <MobileLink to="/members" icon={<Users size={24}/>} label="Lớp" /> */}
         <MobileLink to="/activities" icon={<LayoutDashboard size={24}/>} label="Tường" />
         <MobileLink to="/guestbook" icon={<MessageSquare size={24}/>} label="Lưu bút" />
         

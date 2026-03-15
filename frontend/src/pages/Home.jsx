@@ -10,7 +10,7 @@ const Home = () => {
       <section className="relative h-[80vh] flex items-center justify-center text-white overflow-hidden rounded-3xl mx-2 mt-2">
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1523050853064-8035655880f9?auto=format&fit=crop&q=80" 
+            src="/t04.jpg" 
             className="w-full h-full object-cover brightness-[0.4]"
             alt="Class background"
           />
@@ -31,16 +31,6 @@ const Home = () => {
               Xem hoạt động <ChevronRight size={20} />
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* Thông tin nhanh (Stats) */}
-      <section className="py-12 px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto">
-          {/* <StatCard icon={<Users className="text-blue-500" />} count="40" label="Thành viên" /> */}
-          <StatCard icon={<Heart className="text-red-500" />} count="1000+" label="Kỷ niệm" />
-          <StatCard icon={<Sparkles className="text-yellow-500" />} count="03" label="Năm gắn bó" />
-          <StatCard icon={<MapPin className="text-green-500" />} count="A1" label="Phòng học" />
         </div>
       </section>
 
