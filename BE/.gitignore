@@ -1,0 +1,30 @@
+# 1. Các thư mục phụ thuộc (Dependency)
+node_modules/
+dist/
+build/
+
+# 2. Biến môi trường (CỰC KỲ QUAN TRỌNG - Chứa AWS Key, DB Pass)
+.env
+.env.local
+
+# 3. Logs và Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# 4. Lưu trữ tạm thời (Nếu bạn dùng Multer lưu vào disk thay vì memory)
+uploads/
+temp/
+
+# 5. Hệ điều hành và IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
