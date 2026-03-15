@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, UserCircle2, Loader2 } from 'lucide-react';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 const Members = () => {
   const [members, setMembers] = useState([]);
@@ -10,8 +11,8 @@ const Members = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/members");
-        setMembers(res.data);
+          const res = await axios.get(`${API_BASE}/api/members`);
+          setMembers(res.data);
       } catch (err) {
         console.error("Lỗi lấy danh sách lớp:", err);
       } finally {

@@ -9,8 +9,9 @@ const jwt = require('jsonwebtoken');
 const app = express();
 
 app.use(cors()); // Phải nằm trên cùng
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Thêm dòng này để hỗ trợ FormData tốt hơn
+
+app.use(express.json({ limit: '200mb' })); // Tăng giới hạn body lên 50MB
+app.use(express.urlencoded({ limit: '200mb', extended: true }));
 // 1. Kết nối MySQL
 const db = mysql.createPool({
     host: process.env.DB_HOST,
@@ -30,7 +31,7 @@ const s3Client = new S3Client({
 
 const upload = multer({ 
     storage: multer.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 } // Giới hạn 50MB
+    limits: { fileSize: 200 * 1024 * 1024 } // Giới hạn 200MB
 });
 // Middleware kiểm tra thẻ Token (Xác thực người dùng)
 const verifyToken = (req, res, next) => {
@@ -160,40 +161,41 @@ app.post('/api/guestbook', async (req, res) => {
 // ---------------------------------------------------------
 // API: THÊM HOẠT ĐỘNG MỚI
 // ---------------------------------------------------------
-app.post('/api/activities', verifyToken, upload.single('image'), async (req, res) => {
+// Đổi 'image' thành 'images' và cho phép tối đa 10 ảnh
+app.post('/api/activities', verifyToken, upload.array('images', 10), async (req, res) => {
     try {
         const { content } = req.body;
-        const author_name = req.user.fullname; // Lấy tên từ Token đã giải mã
-        let imageUrl = null;
+        const author_name = req.user.fullname; 
+        let imageUrls = [];
 
-        // Nếu có file ảnh được gửi kèm
-        if (req.file) {
-            const file = req.file;
-            const fileName = `activities/${Date.now()}-${file.originalname}`;
+        // Nếu có nhiều file được gửi lên
+        if (req.files && req.files.length > 0) {
+            // Dùng Promise.all để upload nhiều ảnh cùng lúc lên S3 cho nhanh
+            const uploadPromises = req.files.map(async (file) => {
+                const fileName = `activities/${Date.now()}-${file.originalname.replace(/\s/g, '')}`;
+                const uploadParams = {
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: fileName,
+                    Body: file.buffer,
+                    ContentType: file.mimetype,
+                };
 
-            const uploadParams = {
-                Bucket: process.env.AWS_BUCKET_NAME,
-                Key: fileName,
-                Body: file.buffer,
-                ContentType: file.mimetype,
-                // ACL: 'public-read' // Mở dòng này nếu bucket của bạn cho phép ACL
-            };
+                await s3Client.send(new PutObjectCommand(uploadParams));
+                return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+            });
 
-            // Đẩy ảnh lên S3
-            await s3Client.send(new PutObjectCommand(uploadParams));
-
-            // Tạo đường dẫn ảnh
-            imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+            // Chờ tất cả ảnh upload xong và lấy mảng các link
+            imageUrls = await Promise.all(uploadPromises);
         }
 
-        // Lưu thông tin vào MySQL
-        const query = 'INSERT INTO activities (content, image_url, author_name) VALUES (?, ?, ?)';
-        const [result] = await db.query(query, [content, imageUrl, author_name]);
+        // Lưu mảng link ảnh dưới dạng chuỗi JSON vào database
+        const query = 'INSERT INTO activities (content, image_urls, author_name) VALUES (?, ?, ?)';
+        // Chú ý: Dùng JSON.stringify(imageUrls) để biến mảng thành chuỗi lưu vào MySQL
+        const [result] = await db.query(query, [content, JSON.stringify(imageUrls), author_name]);
 
         res.status(201).json({ 
             success: true, 
-            message: "Đăng bài thành công!",
-            postId: result.insertId 
+            message: "Đăng bài thành công!"
         });
 
     } catch (error) {

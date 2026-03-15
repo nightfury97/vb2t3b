@@ -89,7 +89,7 @@ const CommentSection = ({ activityId }) => {
 const Activities = () => {
   const [posts, setPosts] = useState([]);
   const [content, setContent] = useState("");
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openComments, setOpenComments] = useState({});
 
@@ -109,29 +109,38 @@ const Activities = () => {
 
   // Hàm Đăng bài
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!token) return alert("Vui lòng đăng nhập để đăng bài!"); // Chặn ngay từ đầu
-    if (!content && !file) return;
+  e.preventDefault();
+  if (!token) return alert("Vui lòng đăng nhập để đăng bài!");
+  if (!content && files.length === 0) return;
 
-    const formData = new FormData();
-    formData.append('content', content);
-    if (file) formData.append('image', file);
+  const formData = new FormData();
+  formData.append('content', content);
+  
+  // Vòng lặp nhét tất cả các file vào key 'images'
+  files.forEach(file => {
+      formData.append('images', file);
+  });
 
-    setLoading(true);
-    try {
-      // Sửa lại cấu trúc gửi axios (url, data, config)
-      await axios.post(`${API_BASE}/api/activities`, formData, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      setContent("");
-      setFile(null);
-      fetchPosts();
-    } catch (err) { 
-      alert(err.response?.data?.error || "Lỗi đăng bài!"); 
-    } finally { 
-      setLoading(false); 
-    }
-  };
+  setLoading(true);
+  try {
+    await axios.post(`${API_BASE}/api/activities`, formData, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    setContent("");
+    setFiles([]); // Xóa rỗng danh sách file sau khi đăng
+    fetchPosts();
+  } catch (err) { 
+    alert(err.response?.data?.error || "Lỗi đăng bài!"); 
+  } finally { 
+    setLoading(false); 
+  }
+};
+// 3. Hàm phụ trợ để phân tích chuỗi JSON ảnh từ DB trả về
+const parseImages = (urls) => {
+  if (!urls) return [];
+  try { return typeof urls === 'string' ? JSON.parse(urls) : urls; } 
+  catch { return []; }
+};
 
   // Hàm Thả tim
   const handleLike = async (postId) => {
@@ -179,10 +188,17 @@ const Activities = () => {
         </div>
         <div className="flex justify-between items-center pt-3 border-t border-slate-50">
           <label className="flex items-center gap-2 text-slate-600 hover:bg-slate-100 px-4 py-2 rounded-xl cursor-pointer transition-all">
-            <ImageIcon size={20} className="text-green-500" />
-            <span className="text-sm font-semibold">Ảnh kỷ niệm</span>
-            <input type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} accept="image/*" />
-          </label>
+  <ImageIcon size={20} className="text-green-500" />
+  <span className="text-sm font-semibold">Ảnh kỷ niệm</span>
+  <input 
+    type="file" 
+    multiple // Thêm chữ này để cho phép quét đen chọn nhiều ảnh
+    className="hidden" 
+    onChange={(e) => setFiles(Array.from(e.target.files))} // Chuyển FileList thành Array
+    accept="image/*, video/*" 
+  />
+</label>
+
           <button
             onClick={handleSubmit}
             disabled={loading || !token}
@@ -191,7 +207,11 @@ const Activities = () => {
             {loading ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />} Đăng ngay
           </button>
         </div>
-        {file && <p className="text-xs text-blue-500 mt-3 px-2 flex items-center gap-1 font-medium">📎 {file.name}</p>}
+        {files.length > 0 && (
+  <p className="text-xs text-blue-500 mt-3 px-2 flex items-center gap-1 font-medium">
+    📎 Đã chọn {files.length} tệp
+  </p>
+)}
       </div>
 
       {/* Danh sách bài đăng */}
@@ -221,11 +241,29 @@ const Activities = () => {
               {post.content}
             </div>
 
-            {post.image_url && (
-              <div className="px-2 pb-2">
-                <img src={post.image_url} className="w-full h-auto max-h-[600px] object-cover rounded-2xl" alt="Activity" />
-              </div>
-            )}
+            {(() => {
+  const images = parseImages(post.image_urls);
+  if (images.length === 0) return null;
+
+  return (
+    <div className={`px-2 pb-2 grid gap-1 mt-3 ${
+      images.length === 1 ? 'grid-cols-1' : 
+      images.length === 2 ? 'grid-cols-2' : 
+      'grid-cols-2 md:grid-cols-3' // Nếu 3 ảnh trở lên thì chia 3 cột
+    }`}>
+      {images.map((img, idx) => (
+        <img 
+          key={idx} 
+          src={img} 
+          className={`w-full object-cover rounded-xl border border-slate-100 ${
+            images.length === 1 ? 'max-h-[600px]' : 'h-48'
+          }`} 
+          alt={`Activity ${idx + 1}`} 
+        />
+      ))}
+    </div>
+  );
+})()}
 
             {/* Phần tương tác: Thích & Bình luận */}
             <div className="px-5 py-3 flex gap-6 text-slate-500 border-t border-slate-50">
